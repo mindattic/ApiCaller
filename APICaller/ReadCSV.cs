@@ -3,7 +3,7 @@
 using Microsoft.VisualBasic.FileIO; // This namespace usage is important or else TextFieldParser method will lead to error
 using System.Data;
 
-namespace CSVApp
+namespace APICaller
 {
     public class ReadCSV
     {
