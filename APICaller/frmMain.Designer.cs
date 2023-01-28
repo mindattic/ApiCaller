@@ -167,7 +167,7 @@
             this.txtThreadCount.Name = "txtThreadCount";
             this.txtThreadCount.Size = new System.Drawing.Size(100, 23);
             this.txtThreadCount.TabIndex = 24;
-            this.txtThreadCount.Text = "100";
+            this.txtThreadCount.Text = "200";
             // 
             // txtBaseURL
             // 
@@ -213,7 +213,7 @@
             this.txtPingRate.Name = "txtPingRate";
             this.txtPingRate.Size = new System.Drawing.Size(100, 23);
             this.txtPingRate.TabIndex = 20;
-            this.txtPingRate.Text = "10";
+            this.txtPingRate.Text = "200";
             // 
             // label4
             // 

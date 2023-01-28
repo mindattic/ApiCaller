@@ -11,12 +11,13 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace APICaller
 {
     public partial class frmMain : Form
     {
-       // IHttpClientFactory clientFactory;
+        // IHttpClientFactory clientFactory;
         private static HttpClient httpClient = new HttpClient();
 
 
@@ -24,7 +25,7 @@ namespace APICaller
         {
             //var serviceProvider = new ServiceCollection().AddHttpClient().BuildServiceProvider();
             //clientFactory = serviceProvider.GetService<IHttpClientFactory>();
-          
+
 
             InitializeComponent();
         }
@@ -32,6 +33,8 @@ namespace APICaller
         private string TimeStamp => $"{TimeSpan.FromMilliseconds(watch.ElapsedMilliseconds):hh\\:mm\\:ss}";
 
         Logger _log;
+        Statistics _stats;
+
         //FileWriter fileWriter = new FileWriter("C:\\Users\\ryand\\OneDrive\\Desktop\\APICaller\\APICaller\\results.csv");
 
         DataTable table = new DataTable();
@@ -49,8 +52,13 @@ namespace APICaller
 
         #region Windows Form Events
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool AllocConsole();
+
         private void frmMain_Load(object sender, EventArgs e)
         {
+            AllocConsole();
             openFileDialog.FileName = txtFile.Text;
             OpenFile();
         }
@@ -78,11 +86,14 @@ namespace APICaller
             if (string.IsNullOrWhiteSpace(openFileDialog.FileName)) return;
 
             txtFile.Text = openFileDialog.FileName;
-            var csv = new ReadCSV(openFileDialog.FileName);
+            var csv = new ReadCSV(openFileDialog.FileName, false);
             table = csv.Table;
 
             try
             {
+                //TODO: System.Exception: 'Sum of the columns' FillWeight values cannot exceed 65535.'
+
+
                 if (chkPreviewCSV.Checked)
                     dataGridView.DataSource = table;
 
@@ -130,15 +141,16 @@ namespace APICaller
         public async void ProcessAsync()
         {
             //Initialize
-            _log = new Logger();
+            _log.Clear();
+            _stats.Clear();
             watch.Reset();
             watch.Start();
-            requests = 0;
 
             var tasks = new List<Task>();
+         
             var throttler = new SemaphoreSlim(threadCount);
 
-            Debug.WriteLine($"{Environment.NewLine}{TimeStamp}{TAB}Starting...");
+            WriteLine($"{Environment.NewLine}{TimeStamp}{TAB}Starting...");
 
             foreach (var id in IDList)
             {
@@ -148,9 +160,13 @@ namespace APICaller
                     try
                     {
                         var response = await GetAsync(id);
-
                         if (response == null || !response.IsSuccessStatusCode || response.Content == null)
                         {
+                            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                                _stats.NotFound();
+                            else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                                _stats.BadRequest();
+
                             _log.Error($"Request failed: ID: {id}{TAB}{response.StatusCode.ToString()}", id);
                             return;
                         }
@@ -161,12 +177,13 @@ namespace APICaller
                         if (rs == null || rs.data == null || string.IsNullOrWhiteSpace(rs.data.title)) return;
 
                         _log.Success($"ID: {id}{TAB}Title: {rs.data.title}", id);
+                        _stats.Success();
 
                         if (pingRate > 0)
                         {
                             Interlocked.Increment(ref requests);
                             if (requests % pingRate == 0)
-                                Debug.WriteLine($"{TimeStamp}{TAB}{requests} requests completed in {TimeSpan.FromMilliseconds(watch.ElapsedMilliseconds):hh\\:mm\\:ss}");
+                                WriteLine($"{TimeStamp}{TAB}{requests} requests completed in {TimeSpan.FromMilliseconds(watch.ElapsedMilliseconds):hh\\:mm\\:ss}");
                         }
 
                         // let's wait here for X to honor the API's rate limit                         
@@ -175,6 +192,7 @@ namespace APICaller
                     catch (Exception ex)
                     {
                         _log.Error(ex.Message, -1);
+                        _stats.Exception();
                     }
                     finally
                     {
@@ -187,7 +205,7 @@ namespace APICaller
             // await for all the tasks to complete
             await Task.WhenAll(tasks.ToArray());
 
-            Debug.WriteLine($"{Environment.NewLine}{TimeStamp}{TAB}Done.");
+            WriteLine($"{Environment.NewLine}{TimeStamp}{TAB}Done.");
 
             //Finalize
             watch.Stop();
@@ -205,31 +223,30 @@ namespace APICaller
             var successLog = _log.Items.OrderBy(x => x.ID).Where(x => x.Type == LogItemType.Success).Select(x => x.Message).ToList();
             var errorLog = _log.Items.OrderBy(x => x.ID).Where(x => x.Type == LogItemType.Error).Select(x => x.Message).ToList();
 
-            Debug.Write(Environment.NewLine);
-            Debug.Write(string.Join(Environment.NewLine, successLog));
-            Debug.Write(Environment.NewLine);
-            Debug.Write(Environment.NewLine);
-            Debug.Write($"INFO:{TAB}{requests:N0} requests completed in {elapsed:hh\\:mm\\:ss}");
-            Debug.Write(Environment.NewLine);
-            Debug.Write(Environment.NewLine);
-            Debug.Write(string.Join(Environment.NewLine, errorLog));
-            Debug.Write(Environment.NewLine);
+            WriteLine();
+            Write(string.Join(Environment.NewLine, successLog));
+            WriteLine();
+            WriteLine();
+            Write($"INFO:{TAB}{requests:N0} requests completed in {elapsed:hh\\:mm\\:ss}");
+            WriteLine();
+            WriteLine();
+            Write(string.Join(Environment.NewLine, errorLog));
+            WriteLine();
 
             //Print Metrics
             if (elapsed.Seconds > 0 && elapsed.Seconds < 60)
             {
                 float multiplier = 60 / elapsed.Seconds;
-                Debug.WriteLine($"INFO:{TAB}{requests * multiplier:N0} requests completed per minute");
-                Debug.WriteLine($"INFO:{TAB}{requests * multiplier * 60:N0} requests completed in 1 hour");
-                Debug.WriteLine($"INFO:{TAB}{requests * multiplier * 60 * 2:N0} requests completed in 2 hours");
-                Debug.WriteLine($"INFO:{TAB}{requests * multiplier * 60 * 3:N0} requests completed in 3 hours");
-                Debug.WriteLine($"INFO:{TAB}{requests * multiplier * 60 * 8:N0} requests completed in 8 hours");
-                Debug.Write(Environment.NewLine);
+                WriteLine($"INFO:{TAB}{requests * multiplier:N0} requests completed per minute");
+                WriteLine($"INFO:{TAB}{requests * multiplier * 60:N0} requests completed in 1 hour");
+                WriteLine($"INFO:{TAB}{requests * multiplier * 60 * 2:N0} requests completed in 2 hours");
+                WriteLine($"INFO:{TAB}{requests * multiplier * 60 * 3:N0} requests completed in 3 hours");
+                WriteLine($"INFO:{TAB}{requests * multiplier * 60 * 8:N0} requests completed in 8 hours");
+                WriteLine();
             }
 
-            Debug.Write(Environment.NewLine);
             var ids = _log.Items.OrderBy(x => x.ID).Where(x => x.Type == LogItemType.Success).Select(x => x.ID).ToList();
-            Debug.Write(string.Join(',', ids));
+            Write(string.Join(',', ids));
 
         }
 
@@ -244,6 +261,16 @@ namespace APICaller
             return int.TryParse(s, out _);
         }
 
+
+        private void Write(string s = "")
+        {
+            Console.Out.WriteAsync(s);
+        }
+
+        private void WriteLine(string s = "")
+        {
+            Console.Out.WriteAsync($"{s}{Environment.NewLine}");
+        }
 
     }
 }

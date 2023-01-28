@@ -5,13 +5,9 @@ namespace APICaller.Models
 
     public class Logger
     {
-        public ConcurrentBag<LogItem> Items { get; set; }
+        public ConcurrentBag<LogItem> Items { get; set; } = new ConcurrentBag<LogItem>();
 
-        public Logger()
-        {
-            Items = new ConcurrentBag<LogItem>();
-        }
-
+        public Logger() { }
 
         public bool Message(string message, int id)
         {
@@ -29,6 +25,11 @@ namespace APICaller.Models
         {
             Items.Add(new LogItem(message, id, LogItemType.Error));
             return true;
+        }
+
+        public void Clear()
+        {
+            Items.Clear();
         }
 
     }
