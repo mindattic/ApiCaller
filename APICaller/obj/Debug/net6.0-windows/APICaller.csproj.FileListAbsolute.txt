@@ -16,7 +16,6 @@ C:\Users\ryand\OneDrive\Desktop\APICaller\APICaller\obj\Debug\net6.0-windows\API
 C:\Users\ryand\OneDrive\Desktop\APICaller\APICaller\obj\Debug\net6.0-windows\APICaller.genruntimeconfig.cache
 C:\Users\ryand\OneDrive\Desktop\APICaller\APICaller\obj\Debug\net6.0-windows\ref\APICaller.dll
 C:\Users\ryand\OneDrive\Desktop\APICaller\APICaller\bin\Debug\net6.0-windows\Newtonsoft.Json.dll
-C:\Users\ryand\OneDrive\Desktop\APICaller\APICaller\bin\Debug\net6.0-windows\RestSharp.dll
 C:\Users\ryand\OneDrive\Desktop\APICaller\APICaller\obj\Debug\net6.0-windows\APICaller.csproj.CopyComplete
 C:\Users\ryand\OneDrive\Desktop\APICaller\APICaller\bin\Debug\net6.0-windows\Microsoft.Extensions.DependencyInjection.dll
 C:\Users\ryand\OneDrive\Desktop\APICaller\APICaller\bin\Debug\net6.0-windows\Microsoft.Extensions.DependencyInjection.Abstractions.dll

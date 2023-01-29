@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Runtime.InteropServices;
+using APICaller.Extensions;
 
 namespace APICaller
 {
@@ -32,8 +33,8 @@ namespace APICaller
 
         private string TimeStamp => $"{TimeSpan.FromMilliseconds(watch.ElapsedMilliseconds):hh\\:mm\\:ss}";
 
-        Logger _log;
-        Statistics _stats;
+        Logger _log = new Logger();
+        Statistics _stats = new Statistics();
 
         //FileWriter fileWriter = new FileWriter("C:\\Users\\ryand\\OneDrive\\Desktop\\APICaller\\APICaller\\results.csv");
 
@@ -223,16 +224,11 @@ namespace APICaller
             var successLog = _log.Items.OrderBy(x => x.ID).Where(x => x.Type == LogItemType.Success).Select(x => x.Message).ToList();
             var errorLog = _log.Items.OrderBy(x => x.ID).Where(x => x.Type == LogItemType.Error).Select(x => x.Message).ToList();
 
-            WriteLine();
-            Write(string.Join(Environment.NewLine, successLog));
-            WriteLine();
-            WriteLine();
-            Write($"INFO:{TAB}{requests:N0} requests completed in {elapsed:hh\\:mm\\:ss}");
-            WriteLine();
-            WriteLine();
-            Write(string.Join(Environment.NewLine, errorLog));
-            WriteLine();
-
+            NewLine();
+            Write(string.Join(Environment.NewLine, successLog), 1);
+            WriteLine($"INFO:{TAB}{requests:N0} requests completed in {elapsed:hh\\:mm\\:ss}");
+            Write(string.Join(Environment.NewLine, errorLog), 1);
+       
             //Print Metrics
             if (elapsed.Seconds > 0 && elapsed.Seconds < 60)
             {
@@ -242,7 +238,7 @@ namespace APICaller
                 WriteLine($"INFO:{TAB}{requests * multiplier * 60 * 2:N0} requests completed in 2 hours");
                 WriteLine($"INFO:{TAB}{requests * multiplier * 60 * 3:N0} requests completed in 3 hours");
                 WriteLine($"INFO:{TAB}{requests * multiplier * 60 * 8:N0} requests completed in 8 hours");
-                WriteLine();
+                NewLine();
             }
 
             var ids = _log.Items.OrderBy(x => x.ID).Where(x => x.Type == LogItemType.Success).Select(x => x.ID).ToList();
@@ -250,6 +246,22 @@ namespace APICaller
 
         }
 
+        private void Write(string s = "", int newLines = 0)
+        {
+            Console.Out.WriteAsync(s);
+            Console.Out.WriteAsync($"{Environment.NewLine.Repeat(newLines)}");
+        }
+
+        private void WriteLine(string s = "")
+        {
+            Write(s, 1);
+        }
+
+
+        private void NewLine(int newLines = 1)
+        {
+            Console.Out.WriteAsync($"{Environment.NewLine.Repeat(newLines)}");
+        }
 
         private string PluralSuffix(int count)
         {
@@ -262,15 +274,6 @@ namespace APICaller
         }
 
 
-        private void Write(string s = "")
-        {
-            Console.Out.WriteAsync(s);
-        }
-
-        private void WriteLine(string s = "")
-        {
-            Console.Out.WriteAsync($"{s}{Environment.NewLine}");
-        }
 
     }
 }
